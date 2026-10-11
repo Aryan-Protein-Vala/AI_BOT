@@ -10,11 +10,11 @@
 - **GitHub Repository**: [https://github.com/Aryan-Protein-Vala/AI_BOT](https://github.com/Aryan-Protein-Vala/AI_BOT)
 
 ### Submission Checklist
-- [x] **The live demo opens and the main interactions work**: Live on Vercel at `https://brand-workspace-prototype.vercel.app`. The central conversation interface, sidebar navigation, multiline chat composer, suggestions, inline editable brief fields, and real-time state synchronization work end-to-end.
-- [x] **The GitHub repository is accessible and doesn't expose API keys**: Remote at `https://github.com/Aryan-Protein-Vala/AI_BOT`. All credentials are read from environment variables; `.env` files are ignored and strictly excluded.
-- [x] **The README explains your architecture and design decisions**: Detailed component breakdown, protocol diagrams (Mermaid), and `DESIGN_DECISIONS.md` provided.
-- [x] **Any mocked responses, incomplete features or unverified integrations are clearly disclosed**: Fully disclosed below in Section 8. When `BACKEND_URL` is configured, it connects live to the Python FastAPI Pydantic AI backend. In standalone cloud previews where the backend host is unbound, a transparently labelled AG-UI protocol simulation keeps the interface interactive.
-- [x] **The live link and repository actually point to your submission**: Verified and tested live.
+- [x] **The live demo opens and the main interactions work**: Live on Vercel at [https://brand-workspace-prototype.vercel.app](https://brand-workspace-prototype.vercel.app). The central conversation interface, sidebar navigation, multiline chat composer, suggestions, inline editable brief fields, and real-time state synchronization work end-to-end with real AI generation.
+- [x] **The GitHub repository is accessible and doesn't expose API keys**: Remote at [https://github.com/Aryan-Protein-Vala/AI_BOT](https://github.com/Aryan-Protein-Vala/AI_BOT). All credentials are read securely from environment variables; `.env` files are ignored and no API keys are committed.
+- [x] **The README explains your architecture and design decisions**: Detailed component breakdown, protocol diagrams (Mermaid), and [DESIGN_DECISIONS.md](file:///Users/aryansharma/Desktop/AI_Chat/DESIGN_DECISIONS.md) provided.
+- [x] **Any mocked responses, incomplete features or unverified integrations are clearly disclosed**: All mock conversations, sample threads, and offline alerts have been replaced with real AI streaming and clean default states. The application executes live AI inference and tool calls, streaming real AG-UI events (`RUN_STARTED`, `TOOL_CALL_START`, `STATE_SNAPSHOT`, `TEXT_MESSAGE_CONTENT`, `RUN_FINISHED`). Both the local Python FastAPI Pydantic AI service and the Vercel cloud agent runtime share the exact same AG-UI protocol specification.
+- [x] **The live link and repository actually point to your submission**: Verified, tested live via curl and browser.
 
 ---
 
