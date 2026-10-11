@@ -4,6 +4,20 @@
 
 ---
 
+## 🚀 Live Links & Verification
+
+- **Live Web Application (Vercel)**: [https://brand-workspace-prototype.vercel.app](https://brand-workspace-prototype.vercel.app)
+- **GitHub Repository**: [https://github.com/Aryan-Protein-Vala/AI_BOT](https://github.com/Aryan-Protein-Vala/AI_BOT)
+
+### Submission Checklist
+- [x] **The live demo opens and the main interactions work**: Live on Vercel at `https://brand-workspace-prototype.vercel.app`. The central conversation interface, sidebar navigation, multiline chat composer, suggestions, inline editable brief fields, and real-time state synchronization work end-to-end.
+- [x] **The GitHub repository is accessible and doesn't expose API keys**: Remote at `https://github.com/Aryan-Protein-Vala/AI_BOT`. All credentials are read from environment variables; `.env` files are ignored and strictly excluded.
+- [x] **The README explains your architecture and design decisions**: Detailed component breakdown, protocol diagrams (Mermaid), and `DESIGN_DECISIONS.md` provided.
+- [x] **Any mocked responses, incomplete features or unverified integrations are clearly disclosed**: Fully disclosed below in Section 8. When `BACKEND_URL` is configured, it connects live to the Python FastAPI Pydantic AI backend. In standalone cloud previews where the backend host is unbound, a transparently labelled AG-UI protocol simulation keeps the interface interactive.
+- [x] **The live link and repository actually point to your submission**: Verified and tested live.
+
+---
+
 ## 1. What the Product Does
 
 **Sorsiri Brand Workspace** bridges interactive conversational intelligence and structured strategic documents. Instead of treating an AI chat as an ephemeral text stream, Sorsiri establishes **real, bidirectional shared state** between a Next.js frontend and a Python [Pydantic AI](https://pydantic.dev/) agent over the official [AG-UI (Agent-User Interaction) protocol](https://ai.pydantic.dev/ui/ag-ui/).
