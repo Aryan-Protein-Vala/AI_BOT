@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ActivityItem, BrandBrief, BriefKey } from '@/lib/types'
-import { INITIAL_BRIEF } from '@/lib/ag-ui-client'
+import { INITIAL_BRIEF, SAMPLE_BRIEF } from '@/lib/ag-ui-client'
 import { cn } from '@/lib/utils'
 import { EditableBriefField } from './editable-brief-field'
 
@@ -87,6 +87,13 @@ export function BrandBriefPanel({
     setSaved(false)
   }
 
+  const loadSample = () => {
+    setBrief(SAMPLE_BRIEF)
+    setDirty(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   if (collapsed) {
     return (
       <button
@@ -138,7 +145,26 @@ export function BrandBriefPanel({
       <div className="mt-6 rounded-md bg-[#f7f6f2] p-3">
         <div className="flex items-center justify-between text-[11px]">
           <span className="font-medium text-[#65665e]">Strategy completeness</span>
-          <span className="text-[#77776f] font-mono">{completed}/10</span>
+          <div className="flex items-center gap-2">
+            {completed === 0 ? (
+              <button
+                type="button"
+                onClick={loadSample}
+                className="text-[10px] text-[#53604a] underline hover:text-[#384331]"
+              >
+                Load sample
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={reset}
+                className="text-[10px] text-[#9a988e] hover:text-[#65665e]"
+              >
+                Clear all
+              </button>
+            )}
+            <span className="text-[#77776f] font-mono">{completed}/10</span>
+          </div>
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-[#e2e3dc]">
           <div

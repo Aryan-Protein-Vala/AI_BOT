@@ -1,6 +1,93 @@
 import { NextRequest } from 'next/server'
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || ''
+const MODEL_NAME = process.env.MODEL_NAME || 'openrouter/free'
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+
+const AGENT_SYSTEM_PROMPT = `
+You are Sorsiri Brand Strategist, an expert AI partner who collaborates with founders and marketing leaders to develop rigorous, distinctive brand briefs.
+
+Your purpose is to transform raw ideas into coherent, differentiated brand strategies with real-time shared state synchronization.
+
+Operating Principles:
+1. Help users develop coherent, actionable brand strategies.
+2. Ask concise, pointed clarifying questions when essential context or strategic tension is missing.
+3. Prefer sharp, distinctive recommendations over generic marketing buzzwords (avoid clichés like "innovative solution", "game changer", "seamless experience").
+4. Keep the structured BrandBrief state synchronized with the conversation: whenever you propose, agree on, or refine strategic elements (brand name, positioning, audience, differentiators, value proposition, tone, launch goal), call the \`update_brand_brief\` tool.
+5. Explain your strategic reasoning clearly in refined, user-facing language.
+6. Never fabricate customer research or claim to have conducted external empirical studies.
+7. Treat user-supplied facts as facts, and label your strategic suggestions as recommendations until confirmed.
+8. Distinguish sharp positioning choices from broad appeal: good positioning makes a clear choice about who it is NOT for.
+`
+
+const AGENT_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'update_brand_brief',
+      description: 'Update one or more structured fields in the shared brand brief panel.',
+      parameters: {
+        type: 'object',
+        properties: {
+          brandName: { type: 'string', description: 'Brand name' },
+          industry: { type: 'string', description: 'Industry or market category' },
+          targetAudience: { type: 'string', description: 'Target customer segment & psychographics' },
+          painPoints: { type: 'string', description: 'Audience pain points and unmet needs' },
+          positioning: { type: 'string', description: 'Core strategic positioning statement' },
+          personality: { type: 'string', description: 'Brand personality traits' },
+          valueProposition: { type: 'string', description: 'Primary value proposition' },
+          differentiators: { type: 'string', description: 'Key defensible differentiators' },
+          tone: { type: 'string', description: 'Tone of voice guidelines' },
+          launchObjective: { type: 'string', description: 'Measurable launch milestone' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'propose_positioning_options',
+      description: 'Propose a strategic positioning direction with rationale.',
+      parameters: {
+        type: 'object',
+        properties: {
+          angle: { type: 'string', description: 'Strategic angle name' },
+          positioning: { type: 'string', description: 'Positioning statement' },
+          rationale: { type: 'string', description: 'Strategic rationale' },
+        },
+        required: ['angle', 'positioning', 'rationale'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'develop_launch_strategy',
+      description: 'Set a launch objective and milestones for the brand.',
+      parameters: {
+        type: 'object',
+        properties: {
+          launchObjective: { type: 'string', description: 'Quantifiable launch goal' },
+          pillars: { type: 'array', items: { type: 'string' }, description: 'Messaging pillars' },
+        },
+        required: ['launchObjective'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'audit_brand_brief',
+      description: 'Audit the current brand brief for missing dimensions.',
+      parameters: {
+        type: 'object',
+        properties: {
+          focusArea: { type: 'string', description: 'Specific area to audit' },
+        },
+      },
+    },
+  },
+]
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown> = {}
@@ -10,13 +97,12 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ detail: 'Invalid JSON payload' }), { status: 400 })
   }
 
-  // Attempt real Python backend connection first
+  // 1. If a local or remote Python FastAPI backend is reachable on BACKEND_URL, proxy to it!
   try {
-    const targetUrl = `${BACKEND_URL}/agent`
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3500)
+    const timeoutId = setTimeout(() => controller.abort(), 2000)
 
-    const backendRes = await fetch(targetUrl, {
+    const backendRes = await fetch(`${BACKEND_URL}/agent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,94 +125,149 @@ export async function POST(req: NextRequest) {
       })
     }
   } catch {
-    // Backend offline / unreachable on current host
+    // Backend offline / not directly reachable on this host (e.g. running on Vercel Cloud)
+    // Seamlessly execute via direct OpenRouter engine below!
   }
 
-  // Standalone AG-UI Protocol Demo Fallback (for cloud previews before backend URL is bound)
-  // Transparently labelled to fulfill the checklist requirement:
-  // "Any mocked responses, incomplete features or unverified integrations are clearly disclosed."
+  // 2. Direct OpenRouter AI Execution (runs live on Vercel & anywhere)
   const messages = (body.messages as Array<{ role: string; content: string }>) || []
-  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || ''
   const currentState = (body.state as Record<string, string>) || {}
-  const now = Date.now()
+  const threadId = (body.threadId as string) || `thread_${Date.now()}`
+  const runId = (body.runId as string) || `run_${Date.now()}`
 
-  // Generate dynamic response and state updates tailored to user input
-  let updatedState = { ...currentState }
-  let responseText = ''
-  let toolName = 'update_brand_brief'
+  // Format state into prompt
+  const stateContext = `
+[Current Live Brand Brief State in Session]
+- Brand Name: ${currentState.brandName || '(not set)'}
+- Industry: ${currentState.industry || '(not set)'}
+- Target Audience: ${currentState.targetAudience || '(not set)'}
+- Audience Pain Points: ${currentState.painPoints || '(not set)'}
+- Positioning: ${currentState.positioning || '(not set)'}
+- Personality: ${currentState.personality || '(not set)'}
+- Value Proposition: ${currentState.valueProposition || '(not set)'}
+- Key Differentiators: ${currentState.differentiators || '(not set)'}
+- Tone of Voice: ${currentState.tone || '(not set)'}
+- Launch Objective: ${currentState.launchObjective || '(not set)'}
 
-  const lower = lastUserMsg.toLowerCase()
-  if (lower.includes('skincare') || lower.includes('positioning')) {
-    updatedState = {
-      ...updatedState,
-      brandName: currentState.brandName === 'Lumen House' ? 'Aura Botanical' : currentState.brandName,
-      industry: 'Clean Clinical Skincare',
-      targetAudience: 'Urban professionals experiencing stress-related barrier depletion',
-      positioning: 'Barrier-restorative bio-actives designed for high-stress urban lifestyles.',
-    }
-    responseText =
-      'Here is a refined positioning strategy for your premium sustainable skincare line:\n\n' +
-      '**Positioning Statement:** "Barrier-restorative bio-actives designed for high-stress urban lifestyles."\n\n' +
-      '**Strategic Tension:** Balancing certified clean sustainability with clinically visible recovery for time-constrained professionals.\n\n' +
-      '*(Note: AG-UI shared state has synchronized these properties to your Brand Brief panel.)*'
-  } else if (lower.includes('differentiator') || lower.includes('executive') || lower.includes('tone')) {
-    updatedState = {
-      ...updatedState,
-      differentiators: 'Cortisol-responsive active complexes and zero-plastic airless miron glass packaging.',
-      tone: 'Clinical, grounded, calm, deliberately understated.',
-    }
-    responseText =
-      'Acknowledging your updated target audience of executives, here are the focused differentiators and voice:\n\n' +
-      '1. **Cortisol-Responsive Active Complexes:** Formulated specifically to soothe acute stress-induced inflammation.\n' +
-      '2. **Zero-Plastic Miron Glass:** Defensible sustainability through ultraviolet preservation.\n\n' +
-      '**Tone of Voice:** Clinical, grounded, calm, deliberately understated.'
-  } else if (lower.includes('launch') || lower.includes('objective')) {
-    updatedState = {
-      ...updatedState,
-      launchObjective: 'Secure 500 private preview waitlist members across top design & tech hubs in 30 days.',
-    }
-    responseText =
-      'Here is your launch messaging architecture:\n\n' +
-      '• **Phase 1 (Days 1–10):** "The High-Stress Skin Diagnostic" waitlist opening.\n' +
-      '• **Phase 2 (Days 11–20):** Private gifting to 50 vetted creative directors.\n' +
-      '• **Phase 3 (Days 21–30):** Full waitlist allocation release.\n\n' +
-      '**Launch Objective:** Secure 500 private preview waitlist members in 30 days.'
-  } else if (lower.includes('audit')) {
-    responseText =
-      '**Brand Brief Audit Report:**\n\n' +
-      '• **Foundation:** Strong clarity on brand identity and vertical.\n' +
-      '• **Audience Alignment:** Clear tension between time constraints and high quality expectations.\n' +
-      '• **Recommendation:** Continue sharpening measurable launch milestones.'
-  } else {
-    responseText =
-      `I have captured that strategic direction. In this workspace, any adjustments to positioning, audience, or launch plans automatically synchronize with your live Brand Brief on the right.\n\nWhat dimension would you like to refine next?`
-  }
+Important: The user can edit any field directly in the UI. If any field was edited, respect those edits as the authoritative source of truth. Whenever you formulate or refine a brand element, always execute the \`update_brand_brief\` tool so the live UI synchronizes immediately.
+`
+
+  const openAiMessages = [
+    { role: 'system', content: AGENT_SYSTEM_PROMPT + '\n' + stateContext },
+    ...messages.map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content,
+    })),
+  ]
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const encoder = new TextEncoder()
-      const send = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+      const sendEvent = (event: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
       }
 
-      send({ type: 'RUN_STARTED', timestamp: now, threadId: body.threadId, runId: body.runId })
-      send({ type: 'TOOL_CALL_START', timestamp: now + 50, toolCallName: toolName })
-      send({ type: 'TOOL_CALL_END', timestamp: now + 100, toolCallName: toolName })
-      send({ type: 'STATE_SNAPSHOT', timestamp: now + 150, snapshot: updatedState })
+      sendEvent({ type: 'RUN_STARTED', timestamp: Date.now(), threadId, runId })
 
-      // Stream text in words for realistic feel
-      const words = responseText.split(' ')
-      let i = 0
-      const interval = setInterval(() => {
-        if (i < words.length) {
-          send({ type: 'TEXT_MESSAGE_CONTENT', delta: (i > 0 ? ' ' : '') + words[i] })
-          i++
-        } else {
-          clearInterval(interval)
-          send({ type: 'RUN_FINISHED', timestamp: Date.now() })
+      let updatedState = { ...currentState }
+
+      try {
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://sorsiri.com',
+            'X-Title': 'Sorsiri Brand Workspace',
+          },
+          body: JSON.stringify({
+            model: MODEL_NAME,
+            messages: openAiMessages,
+            tools: AGENT_TOOLS,
+            tool_choice: 'auto',
+          }),
+        })
+
+        if (!openRouterRes.ok) {
+          const errText = await openRouterRes.text()
+          sendEvent({
+            type: 'TEXT_MESSAGE_CONTENT',
+            delta: `Error communicating with AI model: ${errText.slice(0, 200)}`,
+          })
+          sendEvent({ type: 'RUN_FINISHED', timestamp: Date.now() })
           controller.close()
+          return
         }
-      }, 25)
+
+        const completion = await openRouterRes.json()
+        const choice = completion.choices?.[0]
+        const choiceMessage = choice?.message
+
+        // Process Tool Calls
+        if (choiceMessage?.tool_calls && choiceMessage.tool_calls.length > 0) {
+          for (const tc of choiceMessage.tool_calls) {
+            const fnName = tc.function.name
+            let args: Record<string, string> = {}
+            try {
+              args = JSON.parse(tc.function.arguments)
+            } catch {
+              // ignore json parse error
+            }
+
+            sendEvent({ type: 'TOOL_CALL_START', timestamp: Date.now(), toolCallName: fnName })
+
+            if (fnName === 'update_brand_brief') {
+              for (const [k, v] of Object.entries(args)) {
+                if (v && typeof v === 'string') {
+                  updatedState[k] = v
+                }
+              }
+              sendEvent({ type: 'STATE_SNAPSHOT', timestamp: Date.now(), snapshot: updatedState })
+            } else if (fnName === 'propose_positioning_options' && args.positioning) {
+              updatedState.positioning = args.positioning
+              sendEvent({ type: 'STATE_SNAPSHOT', timestamp: Date.now(), snapshot: updatedState })
+            } else if (fnName === 'develop_launch_strategy' && args.launchObjective) {
+              updatedState.launchObjective = args.launchObjective
+              sendEvent({ type: 'STATE_SNAPSHOT', timestamp: Date.now(), snapshot: updatedState })
+            }
+
+            sendEvent({ type: 'TOOL_CALL_END', timestamp: Date.now(), toolCallName: fnName })
+          }
+        }
+
+        // Output content text
+        let contentText = choiceMessage?.content || ''
+        if (!contentText && choiceMessage?.tool_calls?.length > 0) {
+          // If model only called tools without text, provide a concise follow-up
+          contentText = 'I have updated your Brand Brief with those strategic dimensions. What would you like to refine next?'
+        }
+
+        if (contentText) {
+          // Stream tokens smoothly to client
+          const words = contentText.split(' ')
+          for (let i = 0; i < words.length; i++) {
+            sendEvent({
+              type: 'TEXT_MESSAGE_CONTENT',
+              delta: (i > 0 ? ' ' : '') + words[i],
+            })
+            // slight pacing
+            if (i % 4 === 0) {
+              await new Promise((r) => setTimeout(r, 15))
+            }
+          }
+        }
+
+        sendEvent({ type: 'RUN_FINISHED', timestamp: Date.now() })
+        controller.close()
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown AI execution error'
+        sendEvent({
+          type: 'TEXT_MESSAGE_CONTENT',
+          delta: `Sorsiri Agent encountered an error: ${errorMsg}`,
+        })
+        sendEvent({ type: 'RUN_FINISHED', timestamp: Date.now() })
+        controller.close()
+      }
     },
   })
 
@@ -136,7 +277,6 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
-      'X-Demo-Mode': 'active',
     },
   })
 }

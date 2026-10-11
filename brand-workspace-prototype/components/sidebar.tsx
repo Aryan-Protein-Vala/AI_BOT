@@ -87,19 +87,16 @@ export function Sidebar({ active, onNavigate, onNew, mobileOpen, onClose }: Side
 
       <div className="mt-9 border-t border-[#e7e5de] pt-5">
         <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9a988e]">
-          Recent conversations
+          Active Session
         </p>
         <div className="flex flex-col gap-1">
-          {['Finding our point of view', 'A name that feels like us', 'First launch ideas'].map((item, index) => (
-            <button
-              key={item}
-              onClick={() => onNavigate('Brand strategy')}
-              className="flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12px] text-[#77776f] hover:bg-white/70 hover:text-[#242520]"
-            >
-              <span className={cn('size-1.5 rounded-full', index === 0 ? 'bg-[#66745a]' : 'bg-[#d2d0c8]')} />
-              {item}
-            </button>
-          ))}
+          <button
+            onClick={() => onNavigate('Brand strategy')}
+            className="flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12px] font-medium text-[#242520] hover:bg-white/70"
+          >
+            <span className="size-1.5 rounded-full bg-[#66745a]" />
+            Brand Strategy Session
+          </button>
         </div>
       </div>
 

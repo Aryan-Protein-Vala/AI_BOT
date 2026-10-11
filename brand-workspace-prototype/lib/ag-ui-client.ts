@@ -1,6 +1,19 @@
 import { BrandBrief, BriefKey, ChatMessage } from './types'
 
 export const INITIAL_BRIEF: BrandBrief = {
+  brandName: '',
+  industry: '',
+  targetAudience: '',
+  painPoints: '',
+  positioning: '',
+  personality: '',
+  valueProposition: '',
+  differentiators: '',
+  tone: '',
+  launchObjective: '',
+}
+
+export const SAMPLE_BRIEF: BrandBrief = {
   brandName: 'Lumen House',
   industry: 'Independent hospitality',
   targetAudience: 'Design-conscious travelers who want a slower, more personal stay.',

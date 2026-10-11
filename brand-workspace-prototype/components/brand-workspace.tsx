@@ -21,55 +21,24 @@ import { ChatComposer } from './chat-composer'
 import { BrandBriefPanel } from './brand-brief-panel'
 import { StatusBanner } from './status-banner'
 
-const starterMessages: ChatMessage[] = [
+const welcomeMessages: ChatMessage[] = [
   {
-    id: 'starter-1',
+    id: 'welcome-1',
     role: 'assistant',
     content:
-      'Let’s make Lumen House feel as considered as the stays you want to create. I’ll help you shape a clear strategy, then turn it into language your audience can recognize.',
-    time: '9:41 AM',
+      'Welcome to Sorsiri Brand Workspace. I am your strategic AI partner for defining brand positioning, audience segmentation, value propositions, and launch strategies.\n\nYou can converse with me here or edit any field directly in the Brand Brief on the right. Our state is bidirectionally synchronized in real time via the AG-UI protocol.',
+    time: 'Just now',
     status: 'complete',
-  },
-  {
-    id: 'starter-2',
-    role: 'user',
-    content:
-      'We are building a collection of small, design-led places to stay. The idea is that travel should feel more human and less like optimizing an itinerary.',
-    time: '9:42 AM',
-    status: 'complete',
-  },
-  {
-    id: 'starter-3',
-    role: 'assistant',
-    content:
-      'That is a strong starting point. There is a useful tension here: the ease people expect from a modern booking experience, with the texture and serendipity of a local recommendation. I’ve captured that in your positioning and audience notes.',
-    time: '9:43 AM',
-    status: 'complete',
-    toolActivity: 'Synced with Brand Brief (Positioning & Audience)',
   },
 ]
 
 const initialActivities: ActivityItem[] = [
   {
-    id: 'act-1',
-    label: 'Positioning',
-    detail: 'synchronized from initial brief',
+    id: 'act-init',
+    label: 'Brand Brief',
+    detail: 'initialized ready for strategy input',
     timeAgo: 'Just now',
     source: 'agent',
-  },
-  {
-    id: 'act-2',
-    label: 'Audience notes',
-    detail: 'captured in strategy session',
-    timeAgo: '12m ago',
-    source: 'agent',
-  },
-  {
-    id: 'act-3',
-    label: 'Brand brief',
-    detail: 'workspace initialized',
-    timeAgo: 'Today',
-    source: 'user',
   },
 ]
 
@@ -83,7 +52,7 @@ const suggestions = [
 export default function BrandWorkspace() {
   const [activeView, setActiveView] = useState('Brand strategy')
   const [brief, setBrief] = useState<BrandBrief>(INITIAL_BRIEF)
-  const [messages, setMessages] = useState<ChatMessage[]>(starterMessages)
+  const [messages, setMessages] = useState<ChatMessage[]>(welcomeMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -165,6 +134,8 @@ export default function BrandWorkspace() {
   // Reset or start fresh brief
   const handleNewBrief = () => {
     setBrief(INITIAL_BRIEF)
+    setMessages(welcomeMessages)
+    setActivities(initialActivities)
     setActiveView('Brand strategy')
     const newThread = `thread_${Date.now()}`
     threadIdRef.current = newThread
