@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: sorsiri-agent-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MODEL_NAME
+        value: openrouter:openrouter/free
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: PYDANTIC_AI_NO_BANNER
+        value: "1"
+    healthCheckPath: /health
